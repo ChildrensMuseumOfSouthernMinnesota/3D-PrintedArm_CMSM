@@ -9,11 +9,12 @@
 SoftwareSerial maestroSerial(4, 5);
 MicroMaestro maestro(maestroSerial);
 int rotatePos = 6000;
-int outPos = 6000;
-int upPos = 6000;
-int gripPos = 6000;
+int outPos = 5000;
+int upPos = 5000;
+int gripPos = 4000;
 
 int deadZone = 40;
+int speedMultiplier = 8; // Bigger is slower
 
 int rotateStick, outStick, upStick;
 int gripSwitch;
@@ -31,28 +32,28 @@ void loop()
   if (abs(rotateStick)<deadZone) {
     rotateStick = 0;
   }
-  rotatePos+=rotateStick/10;
-  rotatePos = constrain(rotatePos, 4000, 8000);
+  rotatePos+=rotateStick/speedMultiplier;
+  rotatePos = constrain(rotatePos, 2000, 10000);
 
   outStick = analogRead(OUT)-512;
   if (abs(outStick)<deadZone) {
     outStick = 0;
   }
-  outPos+=outStick/10;
-  outPos = constrain(outPos, 4000, 8000);
+  outPos-=outStick/speedMultiplier;
+  outPos = constrain(outPos, 2000, 10000);
 
   upStick = analogRead(UP)-512;
   if (abs(upStick)<deadZone) {
     upStick = 0;
   }
-  upPos+=upStick/10;
-  upPos = constrain(upPos, 4000, 8000);
+  upPos+=upStick/speedMultiplier;
+  upPos = constrain(upPos, 2000, 10000);
 
   gripSwitch = digitalRead(GRIP);
   if (gripSwitch) {
-    gripPos = 8000;
+    gripPos = 10000;
   } else {
-    gripPos = 4000;
+    gripPos = 6000;
   }
   delay(10);
   //Serial.println(upStick);
