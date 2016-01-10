@@ -1,65 +1,91 @@
-#define ROTATE 5
-#define OUT 4
-#define UP 3
-#define GRIP 2
 
-#include "PololuMaestro.h"
+// Analog pins that each axis of the two joysticks are connected to
+#define ROTATE 5 // duh
+#define OUT 4 // left servo as the arm faces away
+#define UP 3 // right servo as the arm faces away
 
-#include <SoftwareSerial.h>
-SoftwareSerial maestroSerial(4, 5);
-MicroMaestro maestro(maestroSerial);
-int rotatePos = 6000;
-int outPos = 5000;
-int upPos = 5000;
-int gripPos = 4000;
+// Digital pin for the gripper toggle switch
+#define GRIP 2 // duh
 
-int deadZone = 40;
-int speedMultiplier = 8; // Bigger is slower
+// Digital pins that the servo signal wires are connected to
+#define ROTATE_SERVO_PIN 6
+#define OUT_SERVO_PIN 5
+#define UP_SERVO_PIN 3
+#define GRIP_SERVO_PIN 9
 
-int rotateStick, outStick, upStick;
-int gripSwitch;
+#include <Servo.h>
+
+// Home positions
+int rotatePos = 1500;
+int outPos = 1500;
+int upPos = 1500;
+int gripPos = 1000;
+
+int deadZone = 40; // Compensates for centering error
+int speedMultiplier = 32; // Bigger is slower
+
+int rotateStick, outStick, upStick, gripSwitch;
+
+int servoMin = 700;
+int servoMax = 2200;
+int gripOpen = 2200;
+int gripClosed = 1500;
+
+
+Servo rotate;
+Servo out;
+Servo up;
+Servo grip;
 
 void setup()
 {
-  maestroSerial.begin(9600);
-  Serial.begin(9600);
+  rotate.attach(ROTATE_SERVO_PIN);
+  out.attach(OUT_SERVO_PIN);
+  up.attach(UP_SERVO_PIN);
+  grip.attach(GRIP_SERVO_PIN);
   pinMode(GRIP, INPUT_PULLUP);
 }
 
 void loop()
 {
+  // Each of the three axes are read, and the distance from center is calculated. 
+  // If inside the deadzone, the value is zeroed/ignored. 
+  // Then the position of the servo is incremented (with a constant to control speed), and constrained to the range of the servo (value is in microseconds)
+  // The sticks control velocity, not position
+
   rotateStick = analogRead(ROTATE)-512;
   if (abs(rotateStick)<deadZone) {
     rotateStick = 0;
   }
   rotatePos+=rotateStick/speedMultiplier;
-  rotatePos = constrain(rotatePos, 2000, 10000);
+  rotatePos = constrain(rotatePos, servoMin, servoMax);
 
   outStick = analogRead(OUT)-512;
   if (abs(outStick)<deadZone) {
     outStick = 0;
   }
   outPos-=outStick/speedMultiplier;
-  outPos = constrain(outPos, 2000, 10000);
+  outPos = constrain(outPos, servoMin, servoMax);
 
   upStick = analogRead(UP)-512;
   if (abs(upStick)<deadZone) {
     upStick = 0;
   }
-  upPos+=upStick/speedMultiplier;
-  upPos = constrain(upPos, 2000, 10000);
+  upPos-=upStick/speedMultiplier;
+  upPos = constrain(upPos, servoMin, servoMax);
 
+  // The gripper is in one of two positions, opened or closed, controlled by a toggle switch
   gripSwitch = digitalRead(GRIP);
   if (gripSwitch) {
-    gripPos = 10000;
+    gripPos = gripOpen;
   } else {
-    gripPos = 6000;
+    gripPos = gripClosed;
   }
-  delay(10);
-  //Serial.println(upStick);
-  maestro.setTarget(ROTATE, rotatePos);
-  maestro.setTarget(OUT, outPos);
-  maestro.setTarget(UP, upPos);
-  maestro.setTarget(GRIP, gripPos);
   
+  // Finally, the positions are written to the servos, with a small delay at the end of the loop
+  rotate.write(rotatePos);
+  out.write(outPos);
+  up.write(upPos);
+  grip.write(gripPos);
+  delay(10);
 }
